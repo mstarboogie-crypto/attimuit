@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>あっち向いてホイ！</title>
+    <meta name="description" content="カメラで顔と指の向きを判定する、CPU対戦のあっち向いてホイ" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👉</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <span class="brand">あっち向いてホイ！</span>
+      <button id="mute-btn" class="icon-btn" type="button" aria-label="音を消す">🔊</button>
+    </header>
+
+    <main>
+      <!-- ===== タイトル（設定）画面 ===== -->
+      <section id="screen-title" class="screen active" aria-labelledby="title-heading">
+        <div class="hero">
+          <div class="hero-face" aria-hidden="true">
+            <div class="cpu-face small" data-look="left"><div class="features"><span class="eye"></span><span class="eye"></span><span class="mouth"></span></div><span class="blush l"></span><span class="blush r"></span></div>
+            <span class="hero-hand">👈</span>
+          </div>
+          <h1 id="title-heading">あっち向いて<br /><span>ホイ！</span></h1>
+          <p class="lead">カメラに向かって、指と顔で CPU と勝負！</p>
+        </div>
+
+        <form id="settings" class="card settings">
+          <fieldset>
+            <legend>何回戦？</legend>
+            <div class="seg" role="radiogroup">
+              <label><input type="radio" name="rounds" value="3" checked /><span>3回戦</span></label>
+              <label><input type="radio" name="rounds" value="5" /><span>5回戦</span></label>
+              <label><input type="radio" name="rounds" value="10" /><span>10回戦</span></label>
+            </div>
+            <p class="hint">1回戦ごとに「攻め」と「守り」を1回ずつやります</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>先攻・後攻</legend>
+            <div class="seg">
+              <label><input type="radio" name="order" value="first" checked /><span>先攻</span></label>
+              <label><input type="radio" name="order" value="second" /><span>後攻</span></label>
+              <label><input type="radio" name="order" value="random" /><span>おまかせ</span></label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>難易度</legend>
+            <div class="seg">
+              <label><input type="radio" name="difficulty" value="easy" checked /><span>かんたん<small>3秒</small></span></label>
+              <label><input type="radio" name="difficulty" value="normal" /><span>ふつう<small>2秒</small></span></label>
+              <label><input type="radio" name="difficulty" value="hard" /><span>むずかしい<small>1秒</small></span></label>
+            </div>
+            <p class="hint">秒数は「ホイ！」から向きを決めるまでの時間。難しいほど CPU があなたのクセを読んできます</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>操作</legend>
+            <div class="seg">
+              <label><input type="radio" name="input" value="camera" checked /><span>📷 カメラ</span></label>
+              <label><input type="radio" name="input" value="buttons" /><span>🎮 ボタン</span></label>
+            </div>
+          </fieldset>
+
+          <button type="submit" class="btn primary big">スタート！</button>
+        </form>
+
+        <div id="title-stats" class="card stats"></div>
+
+        <details class="card howto">
+          <summary>あそびかた</summary>
+          <ol>
+            <li><b>攻め</b>のとき：「ホイ！」で人差し指を上下左右のどれかに向けます。CPU の顔が同じ向きなら <b>1点</b>。</li>
+            <li><b>守り</b>のとき：「ホイ！」で顔を上下左右のどれかに向けます。CPU の指と同じ向きだと相手に1点。</li>
+            <li>「ホイ！」より前に動くと<b>フライング</b>でやり直し。制限時間内に向けないと、攻めは得点なし、守りは相手の得点になります。</li>
+            <li>決めた回数が終わったとき、点数が多いほうの勝ち！</li>
+          </ol>
+          <p class="hint">カメラの映像は端末の中だけで処理され、どこにも送信されません。ボタン操作では矢印キーや W/A/S/D キーも使えます。</p>
+        </details>
+      </section>
+
+      <!-- ===== カメラ準備画面 ===== -->
+      <section id="screen-setup" class="screen" aria-labelledby="setup-heading">
+        <h2 id="setup-heading">カメラの準備</h2>
+        <p id="setup-status" class="status" role="status">準備中…</p>
+        <div id="setup-cam-slot" class="cam-slot"></div>
+        <div id="setup-test" class="setup-test" hidden>
+          <p class="hint">試しに動いてみよう。向きが正しく出れば準備OK！</p>
+          <div class="seg compact">
+            <label><input type="radio" name="test" value="face" checked /><span>顔の向き</span></label>
+            <label><input type="radio" name="test" value="hand" /><span>指の向き</span></label>
+          </div>
+        </div>
+        <div class="row">
+          <button id="recalibrate-btn" class="btn" type="button" hidden>正面を登録し直す</button>
+          <button id="setup-start-btn" class="btn primary" type="button" hidden>試合をはじめる</button>
+        </div>
+        <div class="row">
+          <button id="setup-buttons-btn" class="btn ghost" type="button">ボタン操作で遊ぶ</button>
+          <button class="btn ghost back-btn" type="button">タイトルへ</button>
+        </div>
+      </section>
+
+      <!-- ===== 試合画面 ===== -->
+      <section id="screen-game" class="screen" aria-labelledby="game-heading">
+        <h2 id="game-heading" class="visually-hidden">試合</h2>
+        <div class="scoreboard card">
+          <div class="side player"><span class="who">あなた</span><span id="score-player" class="pts">0</span></div>
+          <div class="mid">
+            <span id="round-label">第1回戦</span>
+            <span id="role-label" class="role">あなたの攻め</span>
+          </div>
+          <div class="side cpu"><span class="who">CPU</span><span id="score-cpu" class="pts">0</span></div>
+        </div>
+
+        <div class="stage">
+          <div class="cpu-face" id="cpu-face" data-look="none"><div class="features"><span class="eye"></span><span class="eye"></span><span class="mouth"></span></div><span class="blush l"></span><span class="blush r"></span></div>
+          <div class="cpu-hand" id="cpu-hand" hidden>✊</div>
+        </div>
+
+        <div class="banner-wrap">
+          <p id="banner" class="banner" aria-live="assertive"></p>
+          <p id="reveal" class="reveal"></p>
+          <div class="timer" aria-hidden="true"><div id="timer-bar" class="timer-bar"></div></div>
+        </div>
+
+        <div class="player-area">
+          <div id="game-cam-slot" class="cam-slot"></div>
+          <div id="pad" class="pad" hidden>
+            <button type="button" data-dir="up" aria-label="上">↑</button>
+            <button type="button" data-dir="left" aria-label="左">←</button>
+            <button type="button" data-dir="right" aria-label="右">→</button>
+            <button type="button" data-dir="down" aria-label="下">↓</button>
+          </div>
+          <p id="player-hint" class="hint center"></p>
+        </div>
+
+        <button id="quit-btn" class="btn ghost small" type="button">やめる</button>
+      </section>
+
+      <!-- ===== 結果画面 ===== -->
+      <section id="screen-result" class="screen" aria-labelledby="result-heading">
+        <div class="card result">
+          <p id="result-emoji" class="result-emoji"></p>
+          <h2 id="result-heading"></h2>
+          <p id="result-score" class="result-score"></p>
+          <div id="result-stats" class="stats"></div>
+        </div>
+        <div class="row">
+          <button id="again-btn" class="btn primary" type="button">もう一回！</button>
+          <button class="btn back-btn" type="button">タイトルへ</button>
+        </div>
+        <details class="card">
+          <summary>試合のきろく</summary>
+          <ol id="result-history" class="history"></ol>
+        </details>
+      </section>
+    </main>
+
+    <!-- カメラ映像（画面に合わせて場所を移動して使い回す） -->
+    <div id="cam-box" class="cam-box">
+      <video id="cam-video" playsinline muted></video>
+      <canvas id="cam-overlay"></canvas>
+      <span id="cam-dir" class="cam-dir"></span>
+      <span id="cam-note" class="cam-note"></span>
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

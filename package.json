@@ -1,0 +1,10 @@
+{
+  "name": "attimuit",
+  "private": true,
+  "description": "カメラで遊ぶ あっち向いてホイ",
+  "type": "module",
+  "scripts": {
+    "start": "npx http-server -c-1 .",
+    "test": "node --test tests/*.test.js"
+  }
+}
